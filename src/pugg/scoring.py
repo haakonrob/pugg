@@ -1,7 +1,7 @@
 from math import exp, log
 from time import time
 from random import random
-from definitions import Note, Store
+from .definitions import Note, Store
 
 
 """

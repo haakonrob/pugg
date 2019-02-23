@@ -11,19 +11,20 @@ if not os.path.exists('/tmp/pugg/'):
     os.mkdir('/tmp/pugg/')
 engine = create_engine('sqlite:////tmp/pugg/db', echo=False)
 Base = declarative_base()
-Session = sessionmaker(bind=engine)
-db = Session()
+session_factory = sessionmaker(bind=engine)
+db = session_factory()
 
 
 class Topic(Base):
     __tablename__ = 'topics'
     path = Column(String, primary_key=True)
-    name = Column(String)
+    real_path = Column(String)
     parent_path = Column(String, ForeignKey('topics.path'))
+    name = Column(String)
     children = relationship("Topic")
 
     def __repr__(self):
-        return "Topic(name={}, children={})".format(self.name, [c.name for c in self.children])
+        return "Topic(name={}, path={}, children={})".format(self.name, self.path, [c.name for c in self.children])
 
     def __eq__(self, other):
         return self.path == other.path
@@ -62,6 +63,7 @@ class Card(Base):
     front = Column(String, nullable=False)
     back = Column(String, nullable=False)
     halflife = Column(Float, nullable=False)
+    last_reviewed = Column(Integer, nullable=False)
 
     def matches(self, other):
         """
@@ -73,7 +75,7 @@ class Card(Base):
         return ((self.front == other.front) + (self.back == other.back) + (self.file_path == other.file_path)) >= 2
 
     def __repr__(self):
-        return "Card(id={}, front={})".format(self.id, self.front)
+        return "Card(id={}, front={}, topic_path={})".format(self.id, self.front, self.topic_path)
 
     def __eq__(self, other):
         return (self.file_path == other.file_path) and (self.hash == other.hash)

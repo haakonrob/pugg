@@ -4,25 +4,10 @@ from .parsing import read_notes
 from copy import deepcopy
 # from .definitions import Note, Group
 from .database import save_notes_db, load_notes_db
-from .scoring import initialise_metadata, get_remembrance_probability, update_half_life
+from .scoring import get_remembrance_probability, update_half_life
 
 
 CACHE_PATH = '.'
-
-def retrieve_and_initialise_metadata(notes):
-    notes = deepcopy(notes)
-    cache = load_notes_db(CACHE_PATH)
-
-    for path, note in notes.dfs():
-        cached_note = cache[path] if cache is not None else None
-        if cached_note is not None and 'metadata' in cached_note.__dict__ and cached_note.metadata is not None:
-            logging.debug("Retrieved cache metadata for note at {}".format(path))
-            note.metadata = deepcopy(cached_note.metadata)
-        else:
-            logging.debug("Initialised metadata for note at {}".format(path))
-            notes[path] = initialise_metadata(note)
-
-    return notes
 
 
 def select(notes):
@@ -57,9 +42,7 @@ def user_grade():
 
 def load_cache(dir):
     path = os.path.join(dir, '.pugg')
-
-    else:
-        return load_notes_db(path)
+    return load_notes_db(path)
 
 
 def main(dir):
@@ -67,7 +50,7 @@ def main(dir):
     if cache is None:
         return
     notes = read_notes(dir, cache)
-    notes = retrieve_and_initialise_metadata(notes)
+    # notes = retrieve_and_initialise_metadata(notes)
 
     try:
         while True:

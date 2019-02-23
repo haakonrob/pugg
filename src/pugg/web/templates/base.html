@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>pugg</title>
+</head>
+<body>
+    {% if subtopics %}
+        <h1>Subtopics</h1>
+            {% for top in subtopics %}
+                <div class="item">
+                    <a href="{{url_for('whatever', path=top.path)}}"> {{top.path}} </a>
+                </div>
+            {% endfor %}
+    {% endif %}
+
+    {% if cards %}
+        <h2>Cards</h2>
+            {% for card in cards %}
+                <div class="item">
+                    {{card.front}}
+                </div>
+            {% endfor %}
+    {% endif %}
+</body>
+</html>

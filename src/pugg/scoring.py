@@ -1,7 +1,6 @@
 from math import exp, log
 from time import time
 from random import random
-from .definitions import Note, Store
 
 
 """
@@ -28,26 +27,14 @@ grades = {
 }
 
 
-def initialise_metadata(note):
-    return Note(name=note.name,
-                faces=note.faces,
-                metadata=Store(half_life=1,
-                               last_reviewed=time()))
-
-
 def update_half_life(note, grade):
     # The randomness helps make sure that notes won't 'clump up', having the same decay rates leading
-    # to repating study sessions
+    # to repeating study sessions
     multiplier = grades[grade]
-    half_life = note.metadata.half_life if note.metadata.half_life is not None else 1
-    last_reviewed = note.metadata.last_reviewed if note.metadata.last_reviewed is not None else time()
-    return Note(name=note.name,
-                faces=note.faces,
-                metadata=Store(half_life=max(1.0, half_life * (multiplier + 0.05 * (random() - 0.5))),
-                               last_reviewed=last_reviewed))
+    return max(1.0, note.halflife * (multiplier + 0.05 * (random() - 0.5)))
 
 
 def get_remembrance_probability(note):
-    t = time() - note.metadata.last_reviewed  # seconds
-    b = log(2)/(note.metadata.half_life*24*60*60)  # half_life is set in days, for human readablility
+    t = time() - note.last_reviewed  # seconds
+    b = log(2)/(note.halflife*24*60*60)  # half_life is set in days, for human readablility
     return exp(-b*t)

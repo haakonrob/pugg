@@ -3,8 +3,8 @@ import click
 import logging
 # from .main_old import main
 from .database import db, Card, File, Topic
-from .parsing import read_notes2, walk_notes, parse_files
-
+from .parsing import read_notes, walk_notes, parse_files
+from . import webapp
 
 
 @click.command()
@@ -87,7 +87,18 @@ def pugg(topic, init, v, dir):
             Once all metadata is transferred, deletions are commited, 
             then new records are inserted
     """
+
+    # dir = validate_dir(dir)
+    # if dir is None:
+    #     print("This is not a pugg subdirectory. Navigate to a pugg directory or specify one using the --dir argument.")
+    #     return
+    # dbpath = os.path.join(dir, '.pugg/db')
+
+    # TODO add initialisation code for a directory
+
     topics, files = walk_notes(dir)
+
+    ###################33
     discovered_paths = [t.path for t in topics]
     topics_to_delete = set()
     files_to_parse = set()
@@ -95,15 +106,6 @@ def pugg(topic, init, v, dir):
     cards_to_delete = set()
     new_records = set()
 
-    # cached_topics = {t.path: t for t in db.query(Topic).all()}
-    # for t in topics:
-    #     if t.path not in cached_topics:
-    #         # New record
-    #     elif
-
-    # Mark all records not consistent with the current directory for deletion
-    cached_topics = {f.path: f for f in db.query(Topic).all()}
-    # db.add_all(topics)
     for t in topics:
         if t not in db.query(Topic).all():
             new_records.add(t)
@@ -116,8 +118,6 @@ def pugg(topic, init, v, dir):
             db.query(Card).filter(Card.file_path.in_(f.path for f in files_to_delete)).all())
 
     # Decide which files should be marked for extraction
-    cached_files = {f.path: f for f in db.query(File).all()}
-
     for f in files:
         lookup = db.query(File).filter(File == f).first()
         if not lookup:
@@ -145,7 +145,10 @@ def pugg(topic, init, v, dir):
             # File is in db, and has not changed.
             pass
 
+    #####################
     cards = parse_files(files_to_parse)
+
+    ################################
     for c in cards:
         # If matches some card about to be deleted, update halflife, then add
         for other in cards_to_delete:
@@ -156,6 +159,7 @@ def pugg(topic, init, v, dir):
                 break
 
     new_records.update(cards)
+    #################################
 
     # Delete all marked records
     for record in [*topics_to_delete, *files_to_delete, *cards_to_delete]:
@@ -166,13 +170,34 @@ def pugg(topic, init, v, dir):
     db.add_all(new_records)
     db.commit()
 
+    ################################
+
+    
     logging.debug("Topics deleted: {}". format(topics_to_delete))
     logging.debug("Files deleted: {}". format(files_to_delete))
     logging.debug("Cards deleted: {}". format(cards_to_delete))
     logging.debug("New records: {}". format(new_records))
 
     # All possible changes have been added to the database!
-    # main(dir)
+    web = True
+    print(db.query(Card).all())
+
+    if web:
+        webapp.serve(dir)
+
+
+def validate_dir(path):
+    dbpath = os.path.join(path, '.pugg/db')
+    if os.path.exists(dbpath):
+        return path
+
+    else:
+        parent = os.path.realpath(os.path.join(path, '..'))
+        if parent == path:
+            # Reached the top directory
+            return None
+        else:
+            return validate_dir(parent)
 
 
 def setup_logging(verbosity):

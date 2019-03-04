@@ -12,7 +12,7 @@
         <h1>Subtopics</h1>
             {% for top in subtopics %}
                 <div class="item">
-                    <a href="{{url_for('browse', path=top.path)}}"> {{top.path}} </a>
+                    <a href="{{url_for('whatever', path=top.path)}}"> {{top.path}} </a>
                 </div>
             {% endfor %}
     {% endif %}
@@ -21,8 +21,7 @@
         <h2>Cards</h2>
             {% for card in cards %}
                 <div class="item">
-                    <a href="{{url_for('revise_card', id=card.id)}}"> {{card.front|safe}} </a>
-
+                    {{card.front}}
                 </div>
             {% endfor %}
     {% endif %}

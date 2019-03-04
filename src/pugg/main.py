@@ -10,7 +10,7 @@ from . import webapp
 @click.command()
 @click.argument('topic', default='all')
 @click.option('--init', is_flag=True, help="Initialises a notes directory for the first time.")
-@click.option('-v', count=True, help="Number of v's sets the logging level. Examples: -v -> DEBUG, -vv -> INFO, etc")
+@click.option('-v', default=0, count=True, help="Number of v's sets the logging level. Examples: -v -> DEBUG, -vv -> INFO, etc")
 @click.option('--dir', default=os.getcwd(), help="Directory where your notes can be found. "
                                                  "Defaults to the current directory")
 def pugg(topic, init, v, dir):
@@ -32,10 +32,7 @@ def pugg(topic, init, v, dir):
     # TODO when setting up in a directory for the first time, the user should be asked to supply the --init flag to
     #  ensure that they aren't going to walk across the whole filesystem
 
-    # TODO pugg needs to search for the .pugg folder to get the previous state, should search parent folders too.
-    #  similar to git
-
-    # TODO Locate all files first, along with their last read date, then filter them based on the file database.
+    # Locate all files first, along with their last read date, then filter them based on the file database.
     #  After this is done, the reduced list of files can be read and parsed.
 
     # markdown_files = [f for f in walk(dir) if f.ext =='.md']
@@ -98,7 +95,7 @@ def pugg(topic, init, v, dir):
 
     topics, files = walk_notes(dir)
 
-    ###################33
+    ###################
     discovered_paths = [t.path for t in topics]
     topics_to_delete = set()
     files_to_parse = set()
@@ -143,6 +140,7 @@ def pugg(topic, init, v, dir):
                 Action:     Leave as-is.
             """
             # File is in db, and has not changed.
+            logging.debug("nada")
             pass
 
     #####################
@@ -178,10 +176,7 @@ def pugg(topic, init, v, dir):
     logging.debug("Cards deleted: {}". format(cards_to_delete))
     logging.debug("New records: {}". format(new_records))
 
-    # All possible changes have been added to the database!
     web = True
-    print(db.query(Card).all())
-
     if web:
         webapp.serve(dir)
 
@@ -201,6 +196,7 @@ def validate_dir(path):
 
 
 def setup_logging(verbosity):
+    print("Logging:", verbosity)
     if verbosity < 6:
         log_level = ['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'][verbosity]
         ext_logger = logging.getLogger("py.warnings")

@@ -2,13 +2,15 @@ import os
 import re
 import logging
 import pypandoc
+from bs4 import BeautifulSoup
 from time import time
 from hashlib import md5
 from .database import File, Topic, Card
 
 
 # Regex match everything between div tags, but minimally.
-div_pat = re.compile('<div>(.+?)</div>', flags=re.DOTALL)
+# TODO replace with built-in HTML parser
+div_pat = re.compile('<div class="card">(.+?)</div>', flags=re.DOTALL)
 
 # Path of the lua filter that extracts blockquotes. The filter could have been written in python, but
 # Pandoc actually includes the whole lua stack which means it can run the faster lua code.
@@ -90,25 +92,27 @@ def parse_files(md_files):
 def extract_cards(path, topic_path):
     notes = []
     filtered_file = pypandoc.convert_file(source_file=path, format='markdown',
-                                          to='markdown', extra_args=['--lua-filter={}'.format(FILTER_PATH)])
-    for s in div_pat.findall(filtered_file):
-        # TODO Add support for multiple faces. The commented block below is an attempt at this.
-        # pairs = re.split(pattern='\s*-{3,}\s*', string=s)
-        # faces = []
-        # for p in pairs:
-        #     faces.extend(p.strip().replace('\r\n', '\n').split('\n\n', 1))
-        # notes.append(Note(name=faces[0], faces=faces))
+                                          to='html', extra_args=['--mathjax', '--lua-filter={}'.format(FILTER_PATH)])
+    soup = BeautifulSoup(filtered_file, features='html.parser')
+    for tag in soup.children:
+        if tag.name=='div' and 'class' in tag.attrs and 'card' in tag.attrs['class']:
+            for i, c in enumerate(tag.contents):
+                if c.name in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+                    c.attrs = {}  # pandoc generates ids for every header, removing saves space
 
-        # Simpler version
-        front, back = s.strip().replace('\r\n', '\n').split('\n\n', 1)
-        hsh = md5()
-        hsh.update((front+back).encode('utf8'))
-        notes.append(Card(file_path=path,
-                          topic_path=topic_path,
-                          hash=str(hsh.hexdigest()),
-                          front=front,
-                          back=back,
-                          halflife=0,
-                          last_reviewed=int(time())))
+                    # TODO replace() in python is slow, try this somewhere else. Maybe even pandoc?
+                    front = repr(c).replace('\\bm', '\\boldsymbol')
+                    back = ''.join('<br />' if d=='\n' else repr(d).replace('\\bm', '\\boldsymbol') for d in tag.contents[i+1:])
+
+                    hsh = md5()
+                    hsh.update((front+back).encode('utf8'))
+                    notes.append(Card(file_path=path,
+                                      topic_path=topic_path,
+                                      hash=str(hsh.hexdigest()),
+                                      front=front,
+                                      back=back,
+                                      halflife=0,
+                                      last_reviewed=int(time())))
+                    break
     return notes
 

@@ -7,6 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy import create_engine
 
+
+# TODO put database file in the notes folder
 if not os.path.exists('/tmp/pugg/'):
     os.mkdir('/tmp/pugg/')
 engine = create_engine('sqlite:////tmp/pugg/db', echo=False)

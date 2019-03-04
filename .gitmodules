@@ -1,0 +1,3 @@
+[submodule "src/pugg/web/MathJax"]
+	path = src/pugg/web/MathJax
+	url = https://github.com/mathjax/MathJax/

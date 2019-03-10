@@ -10,10 +10,11 @@ from . import webapp
 @click.command()
 @click.argument('topic', default='all')
 @click.option('--init', is_flag=True, help="Initialises a notes directory for the first time.")
+@click.option('-w,', '--web', is_flag=True, help="Initialises a notes directory for the first time.")
 @click.option('-v', default=0, count=True, help="Number of v's sets the logging level. Examples: -v -> DEBUG, -vv -> INFO, etc")
 @click.option('--dir', default=os.getcwd(), help="Directory where your notes can be found. "
                                                  "Defaults to the current directory")
-def pugg(topic, init, v, dir):
+def pugg(topic, init, web, v, dir):
     """
     Program that helps you review your notes.
     TOPIC is the topic that you want to study, and it must match some directory in your notes tree.
@@ -176,7 +177,6 @@ def pugg(topic, init, v, dir):
     logging.debug("Cards deleted: {}". format(cards_to_delete))
     logging.debug("New records: {}". format(new_records))
 
-    web = True
     if web:
         webapp.serve(dir)
 

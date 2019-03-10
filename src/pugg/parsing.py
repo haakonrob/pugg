@@ -93,14 +93,23 @@ def extract_cards(path, topic_path):
     notes = []
     filtered_file = pypandoc.convert_file(source_file=path, format='markdown',
                                           to='html', extra_args=['--mathjax', '--lua-filter={}'.format(FILTER_PATH)])
+
+    # TODO 'Real path' attributes of files are not portable, change this to be relative to root dir, or move database
+    #  some local cache so its system specific.
     soup = BeautifulSoup(filtered_file, features='html.parser')
+
+    # Prepend any image link with /tempview/, this allows the card HTML to access assets
+    for img in soup.findAll('img'):
+        if 'src' in img.attrs:
+            img['src'] = '/assets' + os.path.join(os.path.dirname(path), img['src'])
+
     for tag in soup.children:
         if tag.name=='div' and 'class' in tag.attrs and 'card' in tag.attrs['class']:
             for i, c in enumerate(tag.contents):
                 if c.name in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
                     c.attrs = {}  # pandoc generates ids for every header, removing saves space
 
-                    # TODO replace() in python is slow, try this somewhere else. Maybe even pandoc?
+                    # TODO replace() in python is slow, try this in a pandoc filter?
                     front = repr(c).replace('\\bm', '\\boldsymbol')
                     back = ''.join('<br />' if d=='\n' else repr(d).replace('\\bm', '\\boldsymbol') for d in tag.contents[i+1:])
 

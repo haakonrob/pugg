@@ -1,47 +1,51 @@
 import os
 import sys
 from flask import Flask, render_template, send_from_directory
-from sqlalchemy.orm import scoped_session
-from .database import session_factory, Topic, Card
+from .database import Database, Topic, File, Card, OR, AND
+
+
+########################################################################################################################
+# TODO For browsing cards, use Bootstraps Card element!
+# TODO display current filters using buttons, click on them to make them disappear
+#
+#
+#
+#
+#
+########################################################################################################################
 
 this = sys.modules[__name__]
 web_folder = os.path.join(os.path.dirname(__file__), 'web')
-temp_view_folder = os.path.join(web_folder, 'tempview')
 template_folder = os.path.join(web_folder, 'templates')
 static_folder = os.path.join(web_folder, 'static')
+revision_cards = []
+this.dir = None
+this.curr_view = None
+active_cards = []
 
 app = Flask('pugg',
             template_folder=template_folder,
             static_folder=static_folder)
-this.dir = None
-this.curr_view = None
 
-def serve(notes_dir):
+
+def serve(notes_dir, keywords):
     this.dir = notes_dir
+    this.keywords = keywords
+    this.active_cards = []
+    update_cards()
     app.run()
 
 
-# TODO Define REST API
-
-# TODO Retrieve card markdown, export to HTML w MathJax. Then display the card properly.
-
-# TODO Add support for media like images and sounds?
-#  Maybe the media can be loaded into some temp folder, or the real path can be injected into the template?
-
-
-"""
-Functionality:
-    + *Browse* topics and notes by specifying their URL
-    + *Revise* the weakest card within the current topic?
-    + Start a study session where only cards/topics with a specific tag are selected
-    + 
-"""
+def update_cards():
+    db = Database().session
+    active_cards = db.query(Card).all()
+    pass
 
 
 @app.route('/')
 @app.route('/browse/<path:path>')
 def browse(path=''):
-    db = scoped_session(session_factory)
+    db = Database().session
     path = path[:-1] if path.endswith('/') else path
     topic = db.query(Topic).filter(Topic.path == path).first()
 
@@ -53,23 +57,26 @@ def browse(path=''):
         return render_template('browse.html', subtopics=subtopics, cards=cards)
 
 
+@app.route("/revise/next")
+def get_next_card():
+    db = Database().session
+
+
 @app.route('/revise/<int:id>')
 def revise_card(id):
-    db = scoped_session(session_factory)
+    db = Database().session
     card = db.query(Card).filter(Card.id == id).first()
 
     if card:
         this.curr_view = card.topic.real_path
-        #
-        # # Create link to local folder of file, gives access to assets like images etc
-        # if os.path.exists(temp_view_folder):
-        #     os.remove(temp_view_folder)
-        # os.symlink(card.topic.real_path, temp_view_folder, target_is_directory=True)
-
         return render_template('card.html', card=card)
     else:
         return render_template('404.html', obj="card", key=id)
 
+
+# @app.route('/revise/random')
+# def choose_random_card_for_revision():
+#
 
 @app.route('/assets/<path:path>')
 def assets(path):

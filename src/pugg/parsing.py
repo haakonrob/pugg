@@ -110,8 +110,10 @@ def extract_cards(path, topic_path):
                     c.attrs = {}  # pandoc generates ids for every header, removing saves space
 
                     # TODO replace() in python is slow, try this in a pandoc filter?
-                    front = repr(c).replace('\\bm', '\\boldsymbol')
-                    back = ''.join('<br />' if d=='\n' else repr(d).replace('\\bm', '\\boldsymbol') for d in tag.contents[i+1:])
+                    # Markdown preview enhanced uses \bm for bold symbols, replace this with something MathJax
+                    # can understand
+                    front = repr(c).replace('\\bm{', '\\boldsymbol{')
+                    back = ''.join('<br />' if d=='\n' else repr(d).replace('\\bm{', '\\boldsymbol{') for d in tag.contents[i+1:])
 
                     hsh = md5()
                     hsh.update((front+back).encode('utf8'))

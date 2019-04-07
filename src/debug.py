@@ -1,3 +1,3 @@
 from pugg.main import pugg
 
-pugg(('all', '--dir=/home/haakonrr/OneDrive/notes/'))
+pugg(('mathematics', 'laplace', '--dir=/home/haakonrr/OneDrive/notes/', '-w'))

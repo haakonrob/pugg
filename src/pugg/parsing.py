@@ -5,7 +5,7 @@ import pypandoc
 from bs4 import BeautifulSoup
 from time import time
 from hashlib import md5
-from .database import File, Topic, Card
+from .database import Topic, Card
 
 
 # Regex match everything between div tags, but minimally.
@@ -26,19 +26,22 @@ def walk_notes(dir):
     if not os.path.exists(dir):
         raise Exception("Given path {} does not exist".format(dir))
     dir = os.path.realpath(dir)
-    prefix_len = len(dir) + 1  # ignore the first part of the path when creating topic paths
-    topics, md_files = [Topic(name='root', real_path=dir, path='', parent_path='')], []
+    topics, md_files = [Topic(name='root', is_file=False, real_path=dir, path='', parent_path='')], []
+
     for path, folders, files in os.walk(dir):
 
         real_path = os.path.realpath(path)
-        parent_path = filter_name(real_path[prefix_len:])
+        relative_path = os.path.relpath(path, start=dir)
+        parent_path = filter_name(relative_path)
 
         topics.extend([Topic(
-            name=filter_name(f),
-            parent_path=parent_path,
-            real_path=real_path,
-            path=os.path.join(parent_path, filter_name(f)))
-            for f in folders])
+            name=           filter_name(f),
+            is_file=        False,
+            last_read=      os.path.getmtime(os.path.join(path, f)),
+            real_path=      os.path.join(relative_path, f),
+            parent_path=    parent_path,
+            path=           os.path.join(parent_path, filter_name(f)))
+            for f in folders if filter_name(f)])
 
         # topics.extend([Topic(
         #     name=filter_name(f.split('.')[0]),
@@ -46,12 +49,21 @@ def walk_notes(dir):
         #     path=os.path.join(path, f))
         #     for f in files])
 
-        md_files.extend([File(
-            name=filter_name(f),
-            topic_path=parent_path,
-            last_read=os.path.getmtime(os.path.join(path, f)),
-            path=os.path.join(path, f))
+        md_files.extend([Topic(
+            name=           filter_name(f),
+            is_file=        True,
+            last_read=      os.path.getmtime(os.path.join(path, f)),
+            real_path=      os.path.join(relative_path, f),
+            parent_path=    parent_path,
+            path=           os.path.join(parent_path, filter_name(f)))
             for f in files if f.split('.')[-1] == 'md'])
+
+        # md_files.extend([File(
+        #     name=filter_name(f),
+        #     topic_path=parent_path,
+        #     last_read=os.path.getmtime(os.path.join(path, f)),
+        #     path=os.path.join(path, f))
+        #     for f in files if f.split('.')[-1] == 'md'])
 
     return topics, md_files
 
@@ -82,10 +94,12 @@ def read_notes(path):
     return notes
 
 
-def parse_files(md_files):
+def parse_files(md_files, root):
     notes = []
     for f in md_files:
-        notes.extend(extract_cards(f.path, topic_path=f.topic_path))
+        real_path = os.path.join(root, f.real_path)
+        topical_path = f.path
+        notes.extend(extract_cards(real_path, topical_path))
     return notes
 
 
@@ -117,8 +131,7 @@ def extract_cards(path, topic_path):
 
                     hsh = md5()
                     hsh.update((front+back).encode('utf8'))
-                    notes.append(Card(file_path=path,
-                                      topic_path=topic_path,
+                    notes.append(Card(topic_path=topic_path,
                                       hash=str(hsh.hexdigest()),
                                       front=front,
                                       back=back,

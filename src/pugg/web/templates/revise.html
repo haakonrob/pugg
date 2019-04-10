@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{card.front}}</title>
+    <title>{{state.curr_card.front}}</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
     <script type="text/javascript" async
@@ -11,10 +11,25 @@
 
 </head>
 <body>
-    <button class="accordion">{{card.front | safe}}</button>
-    <div class="panel">
-        {{card.back | safe}}
+    <div class="container">
+        <div class="btn-group" role="group" aria-label="Basic example">
+            {% for kw in state.keywords %}
+                <button type="button" class="btn btn-secondary">{{kw}}</button>
+            {% endfor %}
+        </div>
+        <button class="accordion">{{state.curr_card.front | safe}}</button>
+        <div class="panel">
+            {{state.curr_card.back | safe}}
+            <div class="btn-group" role="group" aria-label="Basic example">
+                <button type="button" class="btn btn-secondary">awful</button>
+                <button type="button" class="btn btn-secondary">bad</button>
+                <button type="button" class="btn btn-secondary">ok</button>
+                <button type="button" class="btn btn-secondary">good</button>
+                <button type="button" class="btn btn-secondary">excellent</button>
+            </div>
+        </div>
     </div>
+
 
     <script>
         var acc = document.getElementsByClassName("accordion");
@@ -36,5 +51,8 @@
           });
         }
     </script>
+
+
+
 </body>
 </html>

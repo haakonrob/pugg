@@ -2,7 +2,7 @@ import os
 import click
 import logging
 from . import database as DB
-from .database import Database, Card, File, Topic, Transaction
+from .database import Database, Transaction
 from .parsing import read_notes, walk_notes, parse_files
 from . import webapp
 
@@ -31,6 +31,7 @@ def pugg(keywords, init, web, v, dir):
 
     """
     setup_logging(v)
+    dir = os.path.realpath(dir)
 
     # TODO put database file in the notes folder
     # TODO Validate directory properly
@@ -40,7 +41,7 @@ def pugg(keywords, init, web, v, dir):
     topics_discovered, files_discovered = walk_notes(dir)
 
     db = Database(DEBUGGING_DB_PATH)
-    transaction = compute_transaction(topics_discovered, files_discovered)
+    transaction = compute_transaction(topics_discovered, files_discovered, root=dir)
     db.commit(transaction)
 
     if web:
@@ -68,7 +69,7 @@ def validate_dir(path):
             return validate_dir(parent)
 
 
-def compute_transaction(topics, files):
+def compute_transaction(topics, files, root):
     transaction = Transaction()
 
     # TODO the order of these shouldn't matter, but its confusing. Ideally there should be a method that takes
@@ -77,7 +78,7 @@ def compute_transaction(topics, files):
     transaction.update_topics(topics)
     transaction.update_files(files)
 
-    cards = parse_files(transaction.files_to_parse)
+    cards = parse_files(transaction.files_to_parse, root)
 
     transaction.update_cards(cards)
 

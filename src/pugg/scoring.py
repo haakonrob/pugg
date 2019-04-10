@@ -27,14 +27,13 @@ grades = {
 }
 
 
-def update_half_life(note, grade):
+def update_half_life(halflife, grade):
     # The randomness helps make sure that notes won't 'clump up', having the same decay rates leading
     # to repeating study sessions
     multiplier = grades[grade]
-    return max(1.0, note.halflife * (multiplier + 0.05 * (random() - 0.5)))
+    return max(1.0, halflife * (multiplier + 0.05 * (random() - 0.5)))
 
 
-def get_remembrance_probability(note):
-    t = time() - note.last_reviewed  # seconds
-    b = log(2)/(note.halflife*24*60*60)  # half_life is set in days, for human readablility
-    return exp(-b*t)
+def get_remembrance_probability(halflife, time_since_last_review):
+    b = log(2)/(halflife*24*60*60)  # half_life is set in days, for human readablility
+    return exp(-b*time_since_last_review)

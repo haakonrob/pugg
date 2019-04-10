@@ -3,7 +3,7 @@ import pickle
 import logging
 from collections import namedtuple
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean
-from sqlalchemy import create_engine, or_ as OR, and_ as AND,
+from sqlalchemy import create_engine, or_ as OR, and_ as AND
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, scoped_session
 
@@ -23,27 +23,33 @@ from sqlalchemy.orm import sessionmaker, relationship, scoped_session
 
 # Database is represented by singleton class
 class Database(object):
-    __instance = None
+    _instance = None
     verbose = False
     Base = declarative_base()
     session_factory = None
     engine = None
+    __session = None
 
     # On "creation" of a new instance, just copy over the existing global instance if it already exists
     def __new__(cls, db_path=None):
-        if Database.__instance is None:
+        if Database._instance is None:
             if db_path is None:
                 raise ValueError("First time setup requires a path to the db file")
             self = object.__new__(cls)
             self.engine = create_engine(db_path, echo=self.verbose)
             self.session_factory = sessionmaker(bind=self.engine)
             self.Base.metadata.create_all(self.engine)
-            Database.__instance = self
+            self.__session = self.session_factory()
+            Database._instance = self
 
-        return Database.__instance
+        return Database._instance
 
     @property
     def session(self):
+        return self.__session
+
+    @property
+    def scoped_session(self):
         return scoped_session(self.session_factory)()
 
     def commit(self, transaction):
@@ -74,8 +80,10 @@ class Database(object):
 class Topic(Database.Base):
     __tablename__ = 'topics'
     path = Column(String, primary_key=True)
-    real_path = Column(String)
     parent_path = Column(String, ForeignKey('topics.path'))
+    is_file = Column(Boolean)
+    last_read = Column(Integer)
+    real_path = Column(String)
     name = Column(String)
     children = relationship("Topic")
 
@@ -83,28 +91,28 @@ class Topic(Database.Base):
         return "Topic(name={}, path={}, children={})".format(self.name, self.path, [c.name for c in self.children])
 
     def __eq__(self, other):
-        return self.path == other.path
+        return self.real_path == other.real_path
 
     def __hash__(self):
         return hash(self.path)
 
 
-class File(Database.Base):
-    __tablename__ = 'files'
-    path = Column(String, primary_key=True)
-    name = Column(String)
-    topic_path = Column(String, ForeignKey('topics.path'))
-    topic = relationship("Topic")
-    last_read = Column(Integer, nullable=False)
-
-    def __repr__(self):
-        return "File(path={}, topic={})".format(self.path, self.topic_path)
-
-    def __eq__(self, other):
-        return self.path == other.path
-
-    def __hash__(self):
-        return hash(self.path)
+# class File(Database.Base):
+#     __tablename__ = 'files'
+#     path = Column(String, primary_key=True)
+#     name = Column(String)
+#     topic_path = Column(String, ForeignKey('topics.path'))
+#     topic = relationship("Topic")
+#     last_read = Column(Integer, nullable=False)
+#
+#     def __repr__(self):
+#         return "File(path={}, topic={})".format(self.path, self.topic_path)
+#
+#     def __eq__(self, other):
+#         return self.path == other.path
+#
+#     def __hash__(self):
+#         return hash(self.path)
 
 
 class Card(Database.Base):
@@ -112,8 +120,8 @@ class Card(Database.Base):
     id = Column(Integer, primary_key=True)
     topic_path = Column(String, ForeignKey('topics.path'))
     topic = relationship(Topic)
-    file_path = Column(String, ForeignKey('files.path'))
-    file = relationship(File)
+    # file_path = Column(String, ForeignKey('files.path'))
+    # file = relationship(File)
 
     hash = Column(String, nullable=False)
     front = Column(String, nullable=False)
@@ -133,11 +141,11 @@ class Card(Database.Base):
     def __repr__(self):
         return "Card(id={}, front={}, topic_path={})".format(self.id, self.front, self.topic_path)
 
-    def __eq__(self, other):
-        return (self.file_path == other.file_path) and (self.hash == other.hash)
+    # def __eq__(self, other):
+    #     return (self.file_path == other.file_path) and (self.hash == other.hash)
 
-    def __hash__(self):
-        return hash(self.file_path + self.hash)
+    # def __hash__(self):
+    #     return hash(self.file_path + self.hash)
 
 
 class Transaction:
@@ -152,20 +160,19 @@ class Transaction:
         discovered_paths = [t.path for t in topics]
 
         # Mark new files for addition to the db
+        seen_topics = db.query(Topic).all()
         for t in topics:
-            if t not in db.query(Topic).all():
+            if t not in seen_topics:
                 transaction.new_records.add(t)
 
             # Mark any Topics in db for deletion if they are not in the currently discovered paths
             transaction.topics_to_delete.update(
-                db.query(Topic).filter(Topic.path.notin_(discovered_paths)).all())
+                db.query(Topic).filter(AND(not Topic.is_file, Topic.path.notin_(discovered_paths))).all())
 
         # If there are deleted topics, mark the related records for deletion as well
         if transaction.topics_to_delete:
-            transaction.files_to_delete.update(
-                db.query(File).filter(File.topic_path.in_(t.path for t in transaction.topics_to_delete)).all())
             transaction.cards_to_delete.update(
-                db.query(Card).filter(Card.file_path.in_(f.path for f in transaction.files_to_delete)).all())
+                db.query(Card).filter(Card.topic_path.in_(f.path for f in transaction.files_to_delete)).all())
 
         return transaction
 
@@ -173,7 +180,7 @@ class Transaction:
         db = Database().session
         # Decide which files should be marked for parsing by comparing the edit dates
         for f in files:
-            lookup = db.query(File).filter(File == f).first()
+            lookup = db.query(Topic).filter(Topic == f).first()
             if not lookup:
                 """ 
                     Event:      The file has not been seen before.
@@ -190,7 +197,7 @@ class Transaction:
                 transaction.files_to_parse.add(f)
                 lookup.last_read = f.last_read
                 transaction.cards_to_delete.update(
-                    db.query(Card).filter(Card.file_path == f.path).all())
+                    db.query(Card).filter(Card.topic_path == f.path).all())
             else:
                 """
                     Event:      The file has not been modified.

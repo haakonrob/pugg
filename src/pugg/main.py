@@ -1,13 +1,12 @@
 import os
+import sys
 import click
 import logging
 from . import database as DB
-from .database import Database, Transaction
+from .database import Database, Transaction, DEBUGGING_DB_PATH
 from .parsing import read_notes, walk_notes, parse_files
 from . import webapp
 
-
-DEBUGGING_DB_PATH = 'sqlite:////tmp/pugg/db'
 
 @click.command()
 @click.argument('keywords', nargs=-1)
@@ -19,7 +18,7 @@ DEBUGGING_DB_PATH = 'sqlite:////tmp/pugg/db'
 def pugg(keywords, init, web, v, dir):
     """
     Program that helps you review your notes.
-    TOPIC is the topic that you want to study, and it must match some directory in your notes tree.
+    KEYWORDS are the topics that you want to study, and it must match some directory in your notes tree.
     You can write it in all lowercase, and spaces can be written as '_'.
     Write * if you want to review cards from all notes.
 
@@ -30,13 +29,7 @@ def pugg(keywords, init, web, v, dir):
     Enjoy!
 
     """
-    setup_logging(v)
     dir = os.path.realpath(dir)
-
-    # TODO put database file in the notes folder
-    # TODO Validate directory properly
-    if not os.path.exists('/tmp/pugg/'):
-        os.mkdir('/tmp/pugg/')
 
     topics_discovered, files_discovered = walk_notes(dir)
 

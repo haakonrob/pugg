@@ -21,11 +21,11 @@
         <div class="panel">
             {{state.curr_card.back | safe}}
             <div class="btn-group" role="group" aria-label="Basic example">
-                <button type="button" class="btn btn-secondary">awful</button>
-                <button type="button" class="btn btn-secondary">bad</button>
-                <button type="button" class="btn btn-secondary">ok</button>
-                <button type="button" class="btn btn-secondary">good</button>
-                <button type="button" class="btn btn-secondary">excellent</button>
+                <button type="button" class="btn btn-secondary" onclick="score(1)">awful</button>
+                <button type="button" class="btn btn-secondary" onclick="score(2)">bad</button>
+                <button type="button" class="btn btn-secondary" onclick="score(3)">ok</button>
+                <button type="button" class="btn btn-secondary" onclick="score(4)">good</button>
+                <button type="button" class="btn btn-secondary" onclick="score(5)">excellent</button>
             </div>
         </div>
     </div>
@@ -49,6 +49,14 @@
               panel.style.display = "block";
             }
           });
+        }
+
+        function score(i){
+            fetch("/score/"+i, {
+                method: "POST"
+            }).then(function () {
+                window.location.reload();
+            });
         }
     </script>
 

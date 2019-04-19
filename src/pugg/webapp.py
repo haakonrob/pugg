@@ -2,7 +2,7 @@ import os
 import sys
 from types import SimpleNamespace
 from flask import Flask, render_template, redirect, send_from_directory
-from .database import Database, Topic, Card, OR, AND
+from .database import Database, Topic, Card, DEBUGGING_DB_PATH, OR, AND
 from .scoring import update_half_life, get_remembrance_probability
 
 
@@ -28,14 +28,20 @@ state.scores = {}
 state.dir = ""
 state.keywords = []
 
+
 app = Flask('pugg',
             template_folder=template_folder,
             static_folder=static_folder)
 
 
-def serve(notes_dir, keywords):
-    state.dir = notes_dir
-    state.keywords.append(keywords)
+def serve(notes_dir, keywords=()):
+    if Database._instance is None:
+        db = Database(DEBUGGING_DB_PATH)
+        state.keywords.append("mathematics")
+        state.dir = "D:/onedrive/notes" if sys.platform == 'win32' else "/home/haakonrr/OneDrive/notes"
+    else:
+        state.dir = notes_dir
+        state.keywords.extend(keywords)
     reset_state()
     try:
         app.run()
@@ -88,7 +94,7 @@ def browse(path=''):
 @app.route("/revise/next", methods=['GET'])
 def revise_next_card():
     if state.active_cards:
-        state.curr_card = state.active_cards.pop()
+        state.curr_card = state.active_cards[0]
         return render_template('revise.html', state=state)
     else:
         commit_state()
@@ -107,9 +113,12 @@ def revise_card(id):
         return render_template('404.html', obj="card", key=id)
 
 
-@app.route("/scores/<int:id>/<int:score>", methods=['POST'])
-def score_card(id, score):
-    state.scores[id] = score
+@app.route("/score/<int:score>", methods=['POST'])
+def score_card(score):
+    state.scores[state.curr_card.id] = score
+    if state.active_cards:
+        state.active_cards.pop(0)
+    return redirect('/revise/next')
 
 
 @app.route('/assets/<path:path>', methods=['GET'])
@@ -118,8 +127,8 @@ def assets(path):
     return send_from_directory('/'+os.path.dirname(path), os.path.basename(path))
 
 
-if Database._instance is None:
-    db = Database('sqlite:////tmp/pugg/db')
-    state.keywords.append("mathematics")
-    state.dir = '/home/haakonrr/OneDrive/notes/'
+if 'FLASK_ENV' in os.environ and os.environ['FLASK_ENV'] == 'development':
+    db_path = os.environ['DB_PATH_DEBUG']
+    Database(db_path)
+    state.keywords.extend(['mathematics'])
     reset_state()

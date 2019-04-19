@@ -25,7 +25,7 @@ def read(*names, **kwargs):
 setup(name='pugg',
       version='0.0.1',
       license='BSD 2-Clause License',
-      install_requires=['click', 'pypandoc', 'sqlalchemy', 'flask'],
+      install_requires=['click', 'pypandoc', 'sqlalchemy', 'flask', 'beautifulsoup4', 'python-dotfiles'],
       packages=find_packages('src'),
       package_dir={'': 'src'},
       py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],

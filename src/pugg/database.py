@@ -1,4 +1,5 @@
 import os
+import sys
 import pickle
 import logging
 from collections import namedtuple
@@ -13,12 +14,14 @@ from sqlalchemy.orm import sessionmaker, relationship, scoped_session
     #  Checking for a valid directory should avoid stupid errors like calling pugg on a large filesystem
 
 
-
-# engine = create_engine('sqlite:////tmp/pugg/db', echo=False)
-# Base = declarative_base()
-# session_factory = sessionmaker(bind=engine)
-# db = session_factory()
-# Base.metadata.create_all(engine)
+if 'DB_PATH_DEBUG' in os.environ:
+    DEBUGGING_DB_PATH = os.environ['DB_PATH_DEBUG']
+if sys.platform == 'linux':
+    DEBUGGING_DB_PATH = 'sqlite:////tmp/pugg/db'
+elif sys.platform == 'win32':
+    DEBUGGING_DB_PATH = 'sqlite:///./tmp/db'
+else:
+    raise Exception("Platform {} not supported".format(sys.platform))
 
 
 # Database is represented by singleton class
